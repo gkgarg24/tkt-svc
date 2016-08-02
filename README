@@ -1,0 +1,10 @@
+Ticket Service is an implementation of Ticket Booking service.
+
+To Compile the service run at commandline
+mvn compile
+
+To Run tests
+mvn test
+
+To Run the application
+mvn exec:java
