@@ -8,12 +8,14 @@
 
 ## To Compile the service run at commandline
 
-mvn compile
+> git clone https://github.com/gkgarg24/tkt-svc
+> cd tkt-svc
+> mvn compile
 
 ## To Run tests
 
-mvn test
+> mvn test
 
 ## To Run the application
 
-mvn exec:java
+> mvn exec:java
