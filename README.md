@@ -9,7 +9,9 @@
 ## To Compile the service run at commandline
 
 > git clone https://github.com/gkgarg24/tkt-svc
+
 > cd tkt-svc
+
 > mvn compile
 
 ## To Run tests
