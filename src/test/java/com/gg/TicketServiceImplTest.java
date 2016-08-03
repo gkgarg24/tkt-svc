@@ -22,9 +22,8 @@ public class TicketServiceImplTest {
     Map<Integer, Integer> hm = new ConcurrentHashMap<>();
     Map<Integer, String> levelMap = new HashMap<>();
     Map<String, SeatHold> seatMap = new HashMap<>();
-    Map<String, LocalTime> expireMap = new HashMap<>();
     TicketService ts;
-    long holdTime = 1; // In seconds
+    long holdTime = 10; // In seconds
 
     ScheduledExecutorService schedExec = Executors.newScheduledThreadPool(1);
 
@@ -40,8 +39,8 @@ public class TicketServiceImplTest {
         levelMap.put(3, "Balcony 1");
         levelMap.put(4, "Balcony 2");
 
-        ts = new TicketServiceImpl(hm, seatMap, expireMap, holdTime);
-        schedExec.scheduleAtFixedRate(new CacheMonitor(expireMap, seatMap, hm), 5, 5, TimeUnit.SECONDS);
+        ts = new TicketServiceImpl(hm, seatMap, holdTime);
+        schedExec.scheduleAtFixedRate(new CacheMonitor(seatMap, hm), 5, 5, TimeUnit.SECONDS);
 
     }
 
@@ -85,7 +84,7 @@ public class TicketServiceImplTest {
     public void checkHoldandReserve() throws Exception {
         ts.findAndHoldSeats(30, Optional.of(3), Optional.of(4), "gg@ab.com");
         System.out.println(seatMap);
-        Thread.sleep(20*1000);
+        Thread.sleep(5*1000);
         ts.reserveSeats(seatMap.get("gg@ab.com").seatHoldId, "gg@ab.com");
         assertEquals(hm.get(3).intValue(), 1470);
     }
@@ -93,9 +92,39 @@ public class TicketServiceImplTest {
     @Test
     public void checkHoldExpiry() throws Exception {
         ts.findAndHoldSeats(30, Optional.of(3), Optional.of(4), "gg@ab.com");
-        System.out.println(expireMap);
-        Thread.sleep(80*1000);
+        System.out.println(seatMap);
+        Thread.sleep(20*1000);
         assertEquals(hm.get(3).intValue(), 1500);
+    }
+
+    // Check inventory is permanently reduced after reservation
+    @Test
+    public void checkInventoryAfterReservation() throws Exception {
+        ts.findAndHoldSeats(50, Optional.of(1), Optional.of(2), "gg@ab.com");
+        System.out.println(seatMap);
+        ts.reserveSeats(seatMap.get("gg@ab.com").seatHoldId, "gg@ab.com");
+        Thread.sleep(20*1000); // Wait for cache monitor to run
+        assertEquals(hm.get(1).intValue(), 1200);
+    }
+
+    // Check inventory is permanently reduced after reservation
+    @Test
+    public void checkExpiryTimeNullAfterReservation() throws Exception {
+        ts.findAndHoldSeats(50, Optional.of(1), Optional.of(2), "gg@ab.com");
+        System.out.println(seatMap);
+        ts.reserveSeats(seatMap.get("gg@ab.com").seatHoldId, "gg@ab.com");
+        Thread.sleep(20*1000); // Wait for cache monitor to run
+        assertNull(seatMap.get("gg@ab.com").expTime);
+    }
+
+    // Check inventory is permanently reduced after reservation
+    @Test
+    public void checkConfirmidNotNullAfterReservation() throws Exception {
+        ts.findAndHoldSeats(50, Optional.of(1), Optional.of(2), "gg@ab.com");
+        System.out.println(seatMap);
+        ts.reserveSeats(seatMap.get("gg@ab.com").seatHoldId, "gg@ab.com");
+        Thread.sleep(20*1000); // Wait for cache monitor to run
+        assertNotNull(seatMap.get("gg@ab.com").confirmId);
     }
 
     // Hold seats at next level if min level has numSeats not available.

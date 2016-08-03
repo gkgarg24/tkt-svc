@@ -18,28 +18,30 @@ public class CacheMonitor implements Runnable {
 
     private static final Logger log = LogManager.getLogger(TicketServiceImpl.class.getName());
 
-    Map<String, LocalTime> expireMap;
     Map<String, SeatHold> seatHoldMap;
     Map<Integer, Integer> inventory;
 
-    CacheMonitor(Map<String, LocalTime> expireMap, Map<String, SeatHold> seatHoldMap, Map<Integer, Integer> inventory) {
-        this.expireMap = expireMap;
+    CacheMonitor(Map<String, SeatHold> seatHoldMap, Map<Integer, Integer> inventory) {
         this.seatHoldMap = seatHoldMap;
         this.inventory = inventory;
     }
 
     @Override
     public void run() {
-        Iterator<Map.Entry<String, LocalTime>> iter = expireMap.entrySet().iterator();
+        log.info("Current Held Seats: " + seatHoldMap);
+        Iterator<Map.Entry<String, SeatHold>> iter = seatHoldMap.entrySet().iterator();
         while (iter.hasNext()) {
-            Map.Entry<String, LocalTime> entry = iter.next();
-            if (LocalTime.now().isAfter(entry.getValue())) {
+            Map.Entry<String, SeatHold> entry = iter.next();
+            SeatHold sh = entry.getValue();
+            if (sh.confirmId != null) {
+                log.debug("Reservation is confirmed: {}" , sh.confirmId);
+                continue;
+            } else if (LocalTime.now().isAfter(sh.expTime)) {
                 iter.remove();
-                SeatHold sh = seatHoldMap.get(entry.getKey());
                 int currSeats = inventory.get(sh.seatLevel);
                 inventory.put(sh.seatLevel, currSeats + sh.numSeats);
             }
         }
-        log.info("Current Held Seats: " + expireMap);
+        log.info("Current Inventory: " + inventory);
     }
 }

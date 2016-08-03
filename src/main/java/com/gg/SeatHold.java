@@ -8,9 +8,10 @@ import java.util.Random;
  */
 public class SeatHold {
 
-    int seatLevel;
+     int seatLevel;
     int numSeats;
     int seatHoldId;
+    String confirmId;
     String custEmail;
     LocalTime expTime;
     static Random r = new Random();
@@ -23,12 +24,15 @@ public class SeatHold {
     @Override
     public String toString() {
         return "SeatHold{" +
-                "custEmail='" + custEmail + '\'' +
+                "confirmId='" + confirmId + '\'' +
                 ", seatLevel=" + seatLevel +
                 ", numSeats=" + numSeats +
                 ", seatHoldId=" + seatHoldId +
+                ", custEmail='" + custEmail + '\'' +
                 ", expTime=" + expTime +
                 '}';
     }
+
+
 
 }

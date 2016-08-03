@@ -15,15 +15,13 @@ public class TicketServiceImpl implements  TicketService {
     private static final Logger log = LogManager.getLogger(TicketServiceImpl.class.getName());
 
     Map<Integer, Integer> inventory;
-    Map<String, SeatHold> holdMap;
-    Map<String, LocalTime> expireMap;
+    Map<String, SeatHold> seatHoldMap;
     long holdTime;
 
-    TicketServiceImpl(Map<Integer, Integer> inventory, Map<String, SeatHold> holdMap,
-                      Map<String, LocalTime> expireMap, long holdTime) {
+    TicketServiceImpl(Map<Integer, Integer> inventory, Map<String, SeatHold> seatHoldMap,
+                       long holdTime) {
         this.inventory = inventory;
-        this.holdMap = holdMap;
-        this.expireMap = expireMap;
+        this.seatHoldMap = seatHoldMap;
         this.holdTime = holdTime;
 
     }
@@ -66,7 +64,7 @@ public class TicketServiceImpl implements  TicketService {
             log.info("Seats Hold Failed!! Available: {} Requested: {} Level: {}", currSeats, numSeats, level);
             return null;
         } else {
-            LocalTime lt = LocalTime.now().plusMinutes(holdTime);
+            LocalTime lt = LocalTime.now().plusSeconds(holdTime);
             inventory.put(level, currSeats-numSeats);
             SeatHold sh = new SeatHold();
             sh.numSeats = numSeats;
@@ -74,29 +72,39 @@ public class TicketServiceImpl implements  TicketService {
             sh.seatLevel = level;
             sh.expTime = lt;
             sh.hold();
-            holdMap.put(customerEmail, sh);
-            expireMap.put(customerEmail, lt);
+            seatHoldMap.put(customerEmail, sh);
             return sh;
         }
     }
 
     @Override
     public String reserveSeats(int seatHoldId, String customerEmail) {
-        LocalTime lt = expireMap.get(customerEmail);
-        if (LocalTime.now().isAfter(lt)) {
-            // Delete entry from expireMap
-            expireMap.remove(customerEmail);
-            // Release seats from holdMap
-            SeatHold sh = holdMap.get(customerEmail);
+         SeatHold sh = seatHoldMap.get(customerEmail);
+        if (sh == null) {
+            log.error("Email does not exist: {}", customerEmail);
+            System.out.println("Email not found! Please check entered mail Id is correct: " + customerEmail );
+            return null;
+        } else if (LocalTime.now().isAfter(sh.expTime)) {
+
+            // Release seats from seatHoldMap
             int currSeats = inventory.get(sh.seatLevel);
             inventory.put(sh.seatLevel, currSeats+sh.numSeats);
-        } else {
+            seatHoldMap.remove(customerEmail);
+            System.out.println("Sorry! SeatHold is expired. Please search for seats and try again");
+            return null;
+        } else  {
+             if (sh.seatHoldId != seatHoldId) {
+                 log.error("SeatHold Id does not exist: ", seatHoldId);
+                 System.out.println("SeatHold Id not found! Please check entered Id is correct: "+ seatHoldId);
+                 return null;
+             }
             String confirmId = "C"+seatHoldId;
+            sh.confirmId = confirmId;
+            sh.expTime = null; // Tickets are confirmed so no expiry time
             log.info("Seat Confirmed: {} Email: {}", confirmId, customerEmail);
             return  confirmId;
         }
 
-        return null;
     }
 
     // Add all the levels to reqLvl set for which customer can book ticket
