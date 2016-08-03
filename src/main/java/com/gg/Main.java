@@ -24,11 +24,12 @@ public class Main {
         // Cleanup scheduler will run to remove expired seat holds.
         ScheduledExecutorService schedExec = Executors.newScheduledThreadPool(1);
 
-        Map<Integer, Integer> hm2 = new ConcurrentHashMap<>();
-        hm2.put(1, 50*25);
-        hm2.put(2, 100*20);
-        hm2.put(3, 100*15);
-        hm2.put(4, 100*15);
+        // Map the level to total seats available at each level
+        Map<Integer, Integer> hm = new ConcurrentHashMap<>();
+        hm.put(1, 50*25);
+        hm.put(2, 100*20);
+        hm.put(3, 100*15);
+        hm.put(4, 100*15);
 
         // Maps LevelID to Level name
         Map<Integer, String> levelMap = new HashMap<>();
@@ -38,25 +39,29 @@ public class Main {
         levelMap.put(4, "Balcony 2");
 
         // It will map the Customer Email to SeatHold objects
-        Map<String, SeatHold> seatMap = new HashMap<>();
+        Map<String, SeatHold> seatHoldMap = new HashMap<>();
 
         // It will seat hold id to expiry time
-        Map<Integer, LocalTime> expireMap = new HashMap<>();
+        Map<String, LocalTime> expireMap = new HashMap<>();
+
+        // Hold time in minutes after which hold seats expire returned to inventory
         long holdTime = 5;
 
         Main tc = new Main();
 
-        TicketServiceImpl ts = new TicketServiceImpl(hm2, seatMap, expireMap, holdTime);
+        TicketServiceImpl ts = new TicketServiceImpl(hm, seatHoldMap, expireMap, holdTime);
 
         // Run scheduler to delete expired seat holds
-        schedExec.scheduleAtFixedRate(new CacheMonitor(expireMap), 1 , 1, TimeUnit.MINUTES);
+        schedExec.scheduleAtFixedRate(new CacheMonitor(expireMap, seatHoldMap, hm), 1 , 1, TimeUnit.MINUTES);
 
         log.info("Starting Ticket Service..");
 
-        while (true) runSvc(levelMap, ts);
+        while (true) {
+            tc.runSvc(levelMap, ts);
+        }
     }
 
-    private static void runSvc(Map<Integer, String> levelMap, TicketServiceImpl ts) {
+    private void runSvc(Map<Integer, String> levelMap, TicketServiceImpl ts) {
         Scanner sc = new Scanner(System.in);
 
         System.out.printf("Please select operations: \ns (Search), \nf (Find and Hold), \nr (Reserve)\n");
